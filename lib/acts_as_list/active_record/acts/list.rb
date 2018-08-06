@@ -129,9 +129,9 @@ module ActiveRecord
               attr_accessible :#{configuration[:column]}
             end
 
-            after_destroy :update_positions
-            after_create :update_positions, unless: Proc.new{ ActiveRecord::Acts::List.skip_cb? }
-            after_update :update_positions_if_necessary
+            after_commit :update_positions, on: :destroy
+            after_commit :update_positions, unless: Proc.new{ ActiveRecord::Acts::List.skip_cb? }, on: :create
+            after_commit :update_positions_if_necessary, on: :update
 
             scope :in_list, lambda { where("#{table_name}.#{configuration[:column]} IS NOT NULL") }
           EOV
@@ -185,11 +185,15 @@ module ActiveRecord
         end
 
         def add_to_list_top
-          self.assign_attributes({self.position_column => acts_as_list_list.minimum(self.position_column) || 1 }, {without_protection: true}) if self[self.position_column].nil?
+          if self[self.position_column].nil?
+            write_attribute(self.position_column, acts_as_list_list.minimum(self.position_column) || 1)
+          end
         end
 
         def add_to_list_bottom
-          self.assign_attributes({self.position_column => (acts_as_list_list.maximum(self.position_column) || 0) + 1}, {without_protection: true}) if self[self.position_column].nil?
+          if self[self.position_column].nil?
+            write_attribute(self.position_column, (acts_as_list_list.maximum(self.position_column) || 0) + 1)
+          end
         end
 
         def first?

@@ -3,6 +3,7 @@ require 'helper'
 
 ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "acts_as_list_test")
 ActiveRecord::Schema.verbose = false
+ActiveRecord::Base.raise_in_transactional_callbacks = true
 
 def setup_db(position_options = {})
   # AR caches columns options like defaults etc. Clear them!
