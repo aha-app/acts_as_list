@@ -192,5 +192,21 @@ class ActsAsListTestCase < Minitest::Test
 
     assert_equal $update_positions_called, false
   end
+
+  def test_skips_cb
+    ActiveRecord::Acts::List.skip_callbacks do
+
+      $update_positions_called = false
+      node = ListMixin.last
+
+      def node.update_positions
+        $update_positions_called = true
+      end
+      node.pos = 25
+      node.save
+
+      assert_equal $update_positions_called, false
+    end
+  end
 end
 
