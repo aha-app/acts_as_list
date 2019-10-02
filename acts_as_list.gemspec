@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
 
 
   # Dependencies (installed via "bundle install")
-  s.add_dependency("activerecord", [">= 3.0"])
+  s.add_dependency("activerecord")
+  s.add_dependency("protected_attributes_continued")
   s.add_development_dependency("bundler", [">= 1.0.0"])
 end

@@ -1,3 +1,4 @@
+require 'protected_attributes_continued'
 require 'acts_as_list/active_record/acts/list'
 
 module ActsAsList
