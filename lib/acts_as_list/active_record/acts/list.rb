@@ -161,7 +161,7 @@ module ActiveRecord
             end
           EOV
 
-          self.send(:before_create, "add_to_list_#{configuration[:add_new_at]}")
+          self.send(:before_create, "add_to_list_#{configuration[:add_new_at]}".to_sym)
         end
       end
 
