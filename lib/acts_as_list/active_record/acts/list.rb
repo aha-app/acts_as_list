@@ -4,7 +4,7 @@ module ActiveRecord
       def self.included(base)
         base.extend(ClassMethods)
       end
-      
+
       # Add ability to skip callbacks for save/update.
       def self.skip_callbacks
         old_skip_cb = @skip_cb
@@ -161,7 +161,7 @@ module ActiveRecord
             end
           EOV
 
-          self.send(:before_create, "add_to_list_#{configuration[:add_new_at]}")
+          self.send(:before_create, :"add_to_list_#{configuration[:add_new_at]}")
         end
       end
 
