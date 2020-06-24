@@ -67,7 +67,7 @@ module ActiveRecord
           configuration.update(options) if options.is_a?(Hash)
 
           configuration[:scope] = "#{configuration[:scope]}_id".intern if configuration[:scope].is_a?(Symbol) && configuration[:scope].to_s !~ /_id$/
-
+          rails_changes_method = Rails.version < "5.1" ? "changes" : "saved_changes"
           if configuration[:scope].is_a?(Symbol)
             scope_methods = %(
               def scope_condition
@@ -75,7 +75,7 @@ module ActiveRecord
               end
 
               def scope_changed?
-                changes.include?(scope_name.to_s)
+                #{rails_changes_method}.include?(scope_name.to_s)
               end
             )
           elsif configuration[:scope].is_a?(Array)
@@ -87,7 +87,7 @@ module ActiveRecord
               end
 
               def scope_changed?
-                (attrs.keys & changes.keys.map(&:to_sym)).any?
+                (attrs.keys & #{rails_changes_method}.keys.map(&:to_sym)).any?
               end
 
               def scope_condition
@@ -170,8 +170,18 @@ module ActiveRecord
       # lower in the list of all chapters. Likewise, <tt>chapter.first?</tt> would return +true+ if that chapter is
       # the first in the list of all chapters.
       module InstanceMethods
+        if Rails.version < "5.1"
+          def change_for_column(position_column)
+            changes[position_column]
+          end
+        else
+          def change_for_column(position_column)
+            saved_changes[position_column]
+          end
+        end
+
         def update_positions_if_necessary
-          update_positions if scope_changed? || changes[position_column]
+          update_positions if scope_changed? || change_for_column(position_column)
         end
 
         def update_positions
@@ -179,7 +189,7 @@ module ActiveRecord
           pk = ActiveRecord::Base.connection.quote_column_name acts_as_list_class.primary_key
           up = ActiveRecord::Base.connection.quote_table_name "updated_positions"
 
-          c = changes[position_column]
+          c = change_for_column(position_column)
 
           if c && c[0] && c[1] && (c[0] < c[1])
             # the position moved UP
