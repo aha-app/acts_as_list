@@ -170,14 +170,8 @@ module ActiveRecord
       # lower in the list of all chapters. Likewise, <tt>chapter.first?</tt> would return +true+ if that chapter is
       # the first in the list of all chapters.
       module InstanceMethods
-        if Rails.version < "5.1"
-          def change_for_column(position_column)
-            changes[position_column]
-          end
-        else
-          def change_for_column(position_column)
-            saved_changes[position_column]
-          end
+        def change_for_column(position_column)
+          changes[position_column]
         end
 
         def update_positions_if_necessary
