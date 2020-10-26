@@ -170,12 +170,25 @@ module ActiveRecord
       # lower in the list of all chapters. Likewise, <tt>chapter.first?</tt> would return +true+ if that chapter is
       # the first in the list of all chapters.
       module InstanceMethods
-        def change_for_column(position_column)
-          changes[position_column]
+        # https://github.com/brendon/acts_as_list/commit/75ec5b9b3a7e72a35bc5bd95ca9061d44ece2a76
+        def position_before_save_changed?
+          if ActiveRecord::VERSION::MAJOR > 5 && ActiveRecord::VERSION::MINOR >= 1
+            saved_change_to_attribute? position_column
+          else
+            send "#{position_column}_changed?"
+          end
+        end
+        # https://github.com/brendon/acts_as_list/commit/64b6e15200f1e8eddfbeedf35a225258585b13b4
+        def position_before_save
+          if ActiveRecord::VERSION::MAJOR >= 5 && ActiveRecord::VERSION::MINOR >= 1
+            send("#{position_column}_before_last_save")
+          else
+            send("#{position_column}_was")
+          end
         end
 
         def update_positions_if_necessary
-          update_positions if scope_changed? || change_for_column(position_column)
+          update_positions if scope_changed? || position_before_save_changed?
         end
 
         def update_positions
@@ -183,7 +196,7 @@ module ActiveRecord
           pk = ActiveRecord::Base.connection.quote_column_name acts_as_list_class.primary_key
           up = ActiveRecord::Base.connection.quote_table_name "updated_positions"
 
-          c = change_for_column(position_column)
+          c = position_before_save
 
           if c && c[0] && c[1] && (c[0] < c[1])
             # the position moved UP
