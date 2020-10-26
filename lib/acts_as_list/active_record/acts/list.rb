@@ -4,7 +4,7 @@ module ActiveRecord
       def self.included(base)
         base.extend(ClassMethods)
       end
-      
+
       # Add ability to skip callbacks for save/update.
       def self.skip_callbacks
         old_skip_cb = @skip_cb
@@ -172,7 +172,7 @@ module ActiveRecord
       module InstanceMethods
         # https://github.com/brendon/acts_as_list/commit/75ec5b9b3a7e72a35bc5bd95ca9061d44ece2a76
         def position_before_save_changed?
-          if ActiveRecord::VERSION::MAJOR > 5 && ActiveRecord::VERSION::MINOR >= 1
+          if ActiveRecord::VERSION::MAJOR >= 5 && ActiveRecord::VERSION::MINOR >= 1
             saved_change_to_attribute? position_column
           else
             send "#{position_column}_changed?"
