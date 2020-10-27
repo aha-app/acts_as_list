@@ -196,7 +196,7 @@ module ActiveRecord
           pk = ActiveRecord::Base.connection.quote_column_name acts_as_list_class.primary_key
           up = ActiveRecord::Base.connection.quote_table_name "updated_positions"
 
-          c = [position_before_save, position] if position_before_save
+          c = [position_before_save, position] if position_before_save && position
 
           if c && c[0] && c[1] && (c[0] < c[1])
             # the position moved UP
