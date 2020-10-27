@@ -156,7 +156,7 @@ module ActiveRecord
                   end
                 end
 
-                records.first&.update_positions
+                records.first.update_positions(order: "DESC")
               end
             end
           EOV
@@ -191,27 +191,29 @@ module ActiveRecord
           update_positions if scope_changed? || position_before_save_changed?
         end
 
-        def update_positions
+        def update_positions(order: nil)
           tn = ActiveRecord::Base.connection.quote_table_name acts_as_list_class.table_name
           pk = ActiveRecord::Base.connection.quote_column_name acts_as_list_class.primary_key
           up = ActiveRecord::Base.connection.quote_table_name "updated_positions"
 
           c = [position_before_save, position] if position_before_save && position
 
-          if c && c[0] && c[1] && (c[0] < c[1])
+          sort_order = if order 
+            order
+          elsif c && c[0] && c[1] && (c[0] < c[1])
             # the position moved UP
             # We should order colliding positions by newest last
-            sort_order = "ASC"
+            "ASC"
           else
             # The position moved DOWN
             # we should order colliding positions by newest first
-            sort_order = "DESC"
+            "DESC"
           end
 
-          if add_new_at == :top
-            nulls_go = "FIRST"
+          nulls_go = if add_new_at == :top
+            "FIRST"
           else
-            nulls_go = "LAST"
+            "LAST"
           end
 
           window_function = acts_as_list_list
