@@ -4,7 +4,7 @@ module ActiveRecord
       def self.included(base)
         base.extend(ClassMethods)
       end
-      
+
       # Add ability to skip callbacks for save/update.
       def self.skip_callbacks
         old_skip_cb = @skip_cb
@@ -67,7 +67,7 @@ module ActiveRecord
           configuration.update(options) if options.is_a?(Hash)
 
           configuration[:scope] = "#{configuration[:scope]}_id".intern if configuration[:scope].is_a?(Symbol) && configuration[:scope].to_s !~ /_id$/
-
+          rails_changes_method = Rails.version < "5.1" ? "changes" : "saved_changes"
           if configuration[:scope].is_a?(Symbol)
             scope_methods = %(
               def scope_condition
@@ -75,7 +75,7 @@ module ActiveRecord
               end
 
               def scope_changed?
-                changes.include?(scope_name.to_s)
+                #{rails_changes_method}.include?(scope_name.to_s)
               end
             )
           elsif configuration[:scope].is_a?(Array)
@@ -87,7 +87,7 @@ module ActiveRecord
               end
 
               def scope_changed?
-                (attrs.keys & changes.keys.map(&:to_sym)).any?
+                (attrs.keys & #{rails_changes_method}.keys.map(&:to_sym)).any?
               end
 
               def scope_condition
@@ -156,7 +156,7 @@ module ActiveRecord
                   end
                 end
 
-                records.first&.update_positions
+                records.first.update_positions(order: "DESC")
               end
             end
           EOV
@@ -170,31 +170,50 @@ module ActiveRecord
       # lower in the list of all chapters. Likewise, <tt>chapter.first?</tt> would return +true+ if that chapter is
       # the first in the list of all chapters.
       module InstanceMethods
-        def update_positions_if_necessary
-          update_positions if scope_changed? || changes[position_column]
+        # https://github.com/brendon/acts_as_list/commit/75ec5b9b3a7e72a35bc5bd95ca9061d44ece2a76
+        def position_before_save_changed?
+          if ActiveRecord::VERSION::MAJOR >= 5 && ActiveRecord::VERSION::MINOR >= 1
+            saved_change_to_attribute? position_column
+          else
+            send "#{position_column}_changed?"
+          end
+        end
+        # https://github.com/brendon/acts_as_list/commit/64b6e15200f1e8eddfbeedf35a225258585b13b4
+        def position_before_save
+          if ActiveRecord::VERSION::MAJOR >= 5 && ActiveRecord::VERSION::MINOR >= 1
+            send("#{position_column}_before_last_save")
+          else
+            send("#{position_column}_was")
+          end
         end
 
-        def update_positions
+        def update_positions_if_necessary
+          update_positions if scope_changed? || position_before_save_changed?
+        end
+
+        def update_positions(order: nil)
           tn = ActiveRecord::Base.connection.quote_table_name acts_as_list_class.table_name
           pk = ActiveRecord::Base.connection.quote_column_name acts_as_list_class.primary_key
           up = ActiveRecord::Base.connection.quote_table_name "updated_positions"
 
-          c = changes[position_column]
+          c = [position_before_save, position] if position_before_save && position
 
-          if c && c[0] && c[1] && (c[0] < c[1])
+          sort_order = if order 
+            order
+          elsif c && c[0] && c[1] && (c[0] < c[1])
             # the position moved UP
             # We should order colliding positions by newest last
-            sort_order = "ASC"
+            "ASC"
           else
             # The position moved DOWN
             # we should order colliding positions by newest first
-            sort_order = "DESC"
+            "DESC"
           end
 
-          if add_new_at == :top
-            nulls_go = "FIRST"
+          nulls_go = if add_new_at == :top
+            "FIRST"
           else
-            nulls_go = "LAST"
+            "LAST"
           end
 
           window_function = acts_as_list_list
