@@ -228,6 +228,7 @@ module ActiveRecord
           if ActiveRecord::Acts::List.delayed_updates?
             delay(unique: true, in: 10.seconds)._execute_position_update!(sql)
           else
+            acts_as_list_list.lock.reorder(acts_as_list_class.primary_key).pluck(acts_as_list_class.primary_key)
             _execute_position_update!(sql)
           end
         end
